@@ -154,7 +154,7 @@ class VideoTest(object):
                     class_num = int(top_label_indices[i])
                     cv2.rectangle(to_draw, (xmin, ymin), (xmax, ymax), 
                                   self.class_colors[class_num], 2)
-                    text = self.class_names[class_num] + " " + ('%.2f' % top_conf[i])
+                    text = self.class_names[class_num] + " " + ('%.2f' % top_conf[i]) + " "
 
                     text_top = (xmin, ymin-10)
                     text_bot = (xmin + 80, ymin + 5)
