@@ -161,9 +161,9 @@ class VideoTest(object):
                     text_bot = (xmin + 80, ymin + 5)
                     text_pos = (xmin + 5, ymin)
                     cv2.rectangle(to_draw, text_top, text_bot, self.class_colors[class_num], -1)
-                    print(text)
-                    print(xmin+xmax)
+                    print(text ,( (xmin+xmax)/2, ymax ))
                     cv2.putText(to_draw, text, text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0,0,0), 1)
+                    cv2.circle(to_draw, ((xmin+xmax)/2, ymax), 5, (0, 0, 255), -1)
             
             # Calculate FPS
             # This computes FPS for everything, not just the model's execution 
