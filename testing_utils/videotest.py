@@ -11,7 +11,9 @@ import numpy as np
 from random import shuffle
 from scipy.misc import imread, imresize
 from timeit import default_timer as timer
-
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from scipy import genfromtxt
 import sys
 sys.path.append("..")
 from ssd_utils import BBoxUtility
@@ -21,7 +23,7 @@ class VideoTest(object):
     """ Class for testing a trained SSD model on a video file and show the
         result in a window. Class is designed so that one VideoTest object 
         can be created for a model, and the same object can then be used on 
-        multiple videos and webcams.
+        multiple videos and webcams.      
         
         Arguments:
             class_names: A list of strings, each containing the name of a class.
@@ -95,15 +97,25 @@ class VideoTest(object):
             vid.set(cv2.cv.CV_CAP_PROP_POS_MSEC, start_frame)
             
         accum_time = 0
+        video_time = 0
         curr_fps = 0
         fps = "FPS: ??"
         prev_time = timer()
-            
+        
+        gx, gy, gt = [], [], []
+
+        #4 point designation
+        pts1 = np.float32([[56,65],[368,52],[28,387],[389,390]])
+        pts2 = np.float32([[0,0],[300,0],[0,300],[300,300]])
+        
+        H = cv2.getPerspectiveTransform(pts1,pts2)
+
         while True:
             retval, orig_image = vid.read()
             if not retval:
                 print("Done!")
-                return
+                break
+                #return
                 
             im_size = (self.input_shape[0], self.input_shape[1])    
             resized = cv2.resize(orig_image, im_size)
@@ -144,6 +156,7 @@ class VideoTest(object):
                 top_xmax = det_xmax[top_indices]
                 top_ymax = det_ymax[top_indices]
 
+
                 for i in range(top_conf.shape[0]):
                     xmin = int(round(top_xmin[i] * to_draw.shape[1]))
                     ymin = int(round(top_ymin[i] * to_draw.shape[0]))
@@ -161,10 +174,19 @@ class VideoTest(object):
                     text_bot = (xmin + 80, ymin + 5)
                     text_pos = (xmin + 5, ymin)
                     cv2.rectangle(to_draw, text_top, text_bot, self.class_colors[class_num], -1)
-                    print(text ,( (xmin+xmax)/2, ymax ))
+                    
+                    
+                    print(text , '%.2f' % video_time , ( (xmin+xmax)/2, ymax ) )
                     cv2.putText(to_draw, text, text_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0,0,0), 1)
                     cv2.circle(to_draw, ((xmin+xmax)/2, ymax), 5, (0, 0, 255), -1)
-            
+
+                    imagepoint = [[(xmin+xmax)/2],[ymax],[1]]
+                    groundpoint = np.dot(H, imagepoint)
+
+                    gx.append(groundpoint[0])
+                    gy.append(groundpoint[1])
+                    gt.append(video_time)
+
             # Calculate FPS
             # This computes FPS for everything, not just the model's execution 
             # which may or may not be what you want
@@ -172,17 +194,35 @@ class VideoTest(object):
             exec_time = curr_time - prev_time
             prev_time = curr_time
             accum_time = accum_time + exec_time
+            video_time = video_time + exec_time
             curr_fps = curr_fps + 1
             if accum_time > 1:
                 accum_time = accum_time - 1
                 fps = "FPS: " + str(curr_fps)
                 curr_fps = 0
-            
+
             # Draw FPS in top left corner
             cv2.rectangle(to_draw, (0,0), (50, 17), (255,255,255), -1)
             cv2.putText(to_draw, fps, (3,10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0,0,0), 1)
+
             
+
             cv2.imshow("SSD result", to_draw)
             cv2.waitKey(10)
-            
+
+
+        #create graph
+        fig = plt.figure()
+        ax=Axes3D(fig)
+        ax.scatter(gx, gy, gt, s=5, c="blue")
+
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_zlabel('t')
+
+        plt.show()
         
+        cv2.destroyAllWindows()
+        vid.release()
+
+        return
